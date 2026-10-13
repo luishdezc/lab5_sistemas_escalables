@@ -1,0 +1,21 @@
+# Data source de Redshift (cluster provisionado) aprovisionado por archivo.
+# Autenticación: "default" (cadena del SDK -> instance profile LabInstanceProfile/LabRole) + secreto admin.
+# ec2_iam_role no está en [aws] allowed_auth_providers de Grafana por defecto ("non-allowed auth method").
+apiVersion: 1
+datasources:
+  - name: Redshift-lab5
+    uid: lab5-redshift
+    type: grafana-redshift-datasource
+    access: proxy
+    isDefault: true
+    editable: true
+    jsonData:
+      authType: default
+      defaultRegion: ${region}
+      useServerless: false
+      clusterIdentifier: ${cluster}
+      database: ${database}
+      useManagedSecret: true
+      managedSecret:
+        arn: ${secret_arn}
+        name: ${secret_name}

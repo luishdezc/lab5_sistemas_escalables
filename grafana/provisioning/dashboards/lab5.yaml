@@ -1,0 +1,12 @@
+# Proveedor de dashboards: carga los JSON de /var/lib/grafana/dashboards.
+apiVersion: 1
+providers:
+  - name: lab5
+    folder: Lab5
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    # Revisa el disco cada 5 min (no genera consultas a Redshift)
+    updateIntervalSeconds: 300
+    options:
+      path: /var/lib/grafana/dashboards

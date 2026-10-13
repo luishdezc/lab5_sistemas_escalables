@@ -1,0 +1,61 @@
+#!/bin/bash
+# user_data de la EC2 de Grafana OSS (Amazon Linux 2023).
+# Instala Grafana + plugin de Redshift y aprovisiona data source y dashboard por archivo.
+set -euxo pipefail
+exec > >(tee -a /var/log/lab5-grafana-setup.log) 2>&1
+
+# Repositorio oficial de Grafana
+cat > /etc/yum.repos.d/grafana.repo <<'REPO'
+[grafana]
+name=grafana
+baseurl=https://rpm.grafana.com
+repo_gpgcheck=1
+enabled=1
+gpgcheck=1
+gpgkey=https://rpm.grafana.com/gpg.key
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+REPO
+
+dnf install -y grafana
+
+# Plugin oficial de Redshift (usa la Data API con las credenciales del instance profile).
+# Grafana 13: grafana-cli está obsoleto y sin --homepath falla con "Could not find config defaults".
+grafana cli --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+  plugins install grafana-redshift-datasource
+
+# Configuración vía variables de entorno del servicio
+cat > /etc/sysconfig/grafana-server.lab5 <<'ENV'
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=${admin_password}
+# Nadie puede poner refresh por debajo de 5 minutos (cada refresh = consultas a Redshift)
+GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5m
+GF_ANALYTICS_REPORTING_ENABLED=false
+GF_ANALYTICS_CHECK_FOR_UPDATES=false
+GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+GF_USERS_ALLOW_SIGN_UP=false
+GF_AUTH_ANONYMOUS_ENABLED=false
+ENV
+cat /etc/sysconfig/grafana-server.lab5 >> /etc/sysconfig/grafana-server
+rm -f /etc/sysconfig/grafana-server.lab5
+
+# Data source de Redshift
+mkdir -p /etc/grafana/provisioning/datasources /etc/grafana/provisioning/dashboards /var/lib/grafana/dashboards
+cat > /etc/grafana/provisioning/datasources/redshift.yaml <<'DS'
+${datasource_yaml}
+DS
+
+# Proveedor de dashboards por archivo
+cat > /etc/grafana/provisioning/dashboards/lab5.yaml <<'DP'
+${dashboards_yaml}
+DP
+
+# Dashboard (las macros $__timeFilter quedan literales gracias al heredoc con comillas)
+cat > /var/lib/grafana/dashboards/lab5-streaming.json <<'DASH'
+${dashboard_json}
+DASH
+
+chown -R grafana:grafana /var/lib/grafana /etc/grafana/provisioning
+
+systemctl daemon-reload
+systemctl enable --now grafana-server

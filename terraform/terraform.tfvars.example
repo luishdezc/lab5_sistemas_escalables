@@ -1,0 +1,22 @@
+# Copia este archivo a terraform.tfvars y ajusta los valores.
+
+# Tu IP pública /32 (puedes verla con: curl -s https://checkip.amazonaws.com)
+my_ip_cidr = "203.0.113.10/32"
+
+# "direct" si apigateway.amazonaws.com está en la trust policy de LabRole; si no, "lambda".
+api_integration_mode = "direct"
+
+# Throttling conservador del stage (en producción se subiría).
+api_throttle_rate_limit  = 20
+api_throttle_burst_limit = 40
+
+# Si el apply falla por el mínimo de concurrencia no reservada de la cuenta, usa -1.
+consumer_reserved_concurrency = 2
+
+# Redshift provisionado single-node (el Learner Lab no permite Redshift Serverless).
+# Verifica en el Readme del Learner Lab qué tipos de nodo están permitidos.
+redshift_node_type = "ra3.large"
+
+# Grafana: OSS en EC2 (plan B, funciona en el Learner Lab) / Managed (plan A, requiere SSO/SAML).
+enable_grafana_ec2     = true
+enable_managed_grafana = false

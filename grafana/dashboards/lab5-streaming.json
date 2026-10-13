@@ -1,0 +1,89 @@
+{
+  "uid": "lab5-streaming",
+  "title": "Lab5 - Streaming de eventos",
+  "description": "Refresh de 5 min y rango de 1 h: cada refresh lanza 4 consultas agregadas a Redshift.",
+  "tags": ["lab5", "redshift", "kinesis"],
+  "timezone": "utc",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["5m", "15m", "30m", "1h"] },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Eventos por minuto",
+      "description": "COUNT(*) agrupado por minuto de event_ts.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 60 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+          "format": 1,
+          "rawSQL": "SELECT DATE_TRUNC('minute', event_ts) AS \"time\", COUNT(*) AS eventos FROM public.events WHERE $__timeFilter(event_ts) GROUP BY 1 ORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "barchart",
+      "title": "Promedio de value por event_type",
+      "description": "AVG(value) por tipo de evento en el rango seleccionado.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+      "fieldConfig": { "defaults": { "decimals": 2 }, "overrides": [] },
+      "options": { "orientation": "horizontal", "xField": "event_type", "showValue": "auto", "legend": { "showLegend": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+          "format": 1,
+          "rawSQL": "SELECT event_type, AVG(value) AS promedio FROM public.events WHERE $__timeFilter(event_ts) GROUP BY event_type ORDER BY event_type"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "barchart",
+      "title": "Top 10 device_id",
+      "description": "Dispositivos con más eventos en el rango seleccionado.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 9 },
+      "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "orientation": "horizontal", "xField": "device_id", "showValue": "auto", "legend": { "showLegend": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+          "format": 1,
+          "rawSQL": "SELECT device_id, COUNT(*) AS eventos FROM public.events WHERE $__timeFilter(event_ts) GROUP BY device_id ORDER BY eventos DESC LIMIT 10"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Latencia promedio de ingesta",
+      "description": "AVG(ingested_at - event_ts). Incluye la ventana de batching de 10 s del consumidor.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 9 },
+      "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 2 }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "colorMode": "value", "graphMode": "none" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-redshift-datasource", "uid": "lab5-redshift" },
+          "format": 1,
+          "rawSQL": "SELECT AVG(DATEDIFF(ms, event_ts, ingested_at)) / 1000.0 AS latencia_s FROM public.events WHERE $__timeFilter(event_ts)"
+        }
+      ]
+    }
+  ]
+}
